@@ -14,11 +14,6 @@
 // .\vcpkg.exe export grpc:x64-windows protobuf:x64-windows  --nuget  --nuget-id=grpc_x64_3_14 --nuget-version=3.14.0
 // Install-Package grpc_x64_3_14 -Source "E:\DEV\DEV.SE\Service\vcpkg"
 
-//Bond
-// .\vcpkg install bond:x64-windows
-// .\vcpkg.exe export bond:x64-windows --nuget  --nuget-id=bond_x64_9_03 --nuget-version=9.03.0
-// Install-Package bond_x64_9_03 -Source "E:\DEV\DEV.SE\Service\vcpkg"
-
 //CppSDK
 //vcpkg install cpprestsdk:x64-windows
 // .\vcpkg.exe export cpprestsdk:x64-windows --nuget  --nuget-id=cpprestsdk_x64_2_10_18 --nuget-version=9.03.0
@@ -48,7 +43,7 @@ public :
 	{
 		LOG_TRACE << __FUNCTION__;
 
-		//CoInitializeSecurity(0, -1, 0, 0, RPC_C_AUTHN_LEVEL_NONE,RPC_C_IMP_LEVEL_IDENTIFY, 0, 0, 0);
+		CoInitializeSecurity(0, -1, 0, 0, RPC_C_AUTHN_LEVEL_NONE,RPC_C_IMP_LEVEL_IDENTIFY, 0, 0, 0);
 		return S_OK;
 	}
 	void ServiceMain(DWORD dwArgc, LPTSTR* lpszArgv);
