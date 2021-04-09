@@ -1,0 +1,178 @@
+HRESULT InitializeServerSecurity(bool allow_calls_from_medium)
+	{
+		CSecurityDesc sd;
+		DWORD eole_auth_capabilities = EOAC_DYNAMIC_CLOAKING;
+		if (allow_calls_from_medium)
+		{
+			GetEveryoneDaclSecurityDescriptor(&sd,
+				COM_RIGHTS_EXECUTE,
+				COM_RIGHTS_EXECUTE);
+			sd.SetOwner(Sids::Admins());
+			sd.SetGroup(Sids::Admins());
+		}
+		else if (IsRunningAsSystem()) 
+		{
+			GetAdminDaclSecurityDescriptor(&sd, COM_RIGHTS_EXECUTE);
+		}
+
+		HRESULT hr = ::CoInitializeSecurity(const_cast<SECURITY_DESCRIPTOR*>(sd.GetPSECURITY_DESCRIPTOR()),
+			-1,
+			NULL,
+			NULL,
+			RPC_C_AUTHN_LEVEL_PKT_PRIVACY,
+			RPC_C_IMP_LEVEL_IDENTIFY,
+			NULL,
+			eole_auth_capabilities,
+			NULL);
+		//ASSERT(SUCCEEDED(hr), (_T("[InitializeServerSecurity failed][0x%x]"), hr));
+		return hr;
+	}
+	HRESULT GetThreadUserSid(CString* sid)
+	{
+		//ASSERT1(sid);
+		CAccessToken access_token;
+		CSid user_sid;
+		if (access_token.GetThreadToken(TOKEN_READ) &&
+			access_token.GetUser(&user_sid)) 
+		{
+			sid->SetString(user_sid.Sid());
+			return S_OK;
+		}
+		else 
+		{
+			//HRESULT hr = HRESULTFromLastError();
+			//UTIL_LOG(L2, (_T("[GetThreadUserSid failed][0x%x]"), hr));
+			return E_FAIL;
+		}
+	}
+	HRESULT GetProcessUserSid(CSid* sid)
+	{
+		//ASSERT1(sid);
+
+		CAccessToken token;
+		if (!token.GetProcessToken(TOKEN_QUERY) || !token.GetUser(sid))
+		{
+			//HRESULT hr = HRESULTFromLastError();
+			HRESULT hr = E_FAIL;
+			// Assert only if thread_sid is populated. This is to eliminate other
+			// reasons for GetProcessToken/GetUser to fail.
+			CString thread_sid;
+			//ASSERT(FAILED(GetThreadUserSid(&thread_sid)),(_T("[Did you mean to call GetThreadUserSid?][0x%x][%s]"),hr, thread_sid));
+
+			return hr;
+		}
+
+		return S_OK;
+	}
+	HRESULT GetProcessUser(CString* name, CString* domain, CString* sid)
+	{
+		CSid current_sid;
+
+		HRESULT hr = GetProcessUserSid(&current_sid);
+		if (FAILED(hr))
+		{
+			return hr;
+		}
+
+		if (sid != NULL)
+		{
+			*sid = current_sid.Sid();
+		}
+		if (name != NULL)
+		{
+			*name = current_sid.AccountName();
+		}
+		if (domain != NULL)
+		{
+			*domain = current_sid.Domain();
+		}
+		return S_OK;
+	}
+	HRESULT GetEffectiveUserSid(CString* sid)
+	{
+		HRESULT hr = GetThreadUserSid(sid);
+		return SUCCEEDED(hr) ? hr : GetProcessUser(NULL, NULL, sid);
+	}
+	bool IsRunningAsSystem()
+	{
+		CString sid;
+		return SUCCEEDED(GetEffectiveUserSid(&sid)) ? IsLocalSystemSid(sid) : false;
+	}
+	inline bool IsLocalSystemSid(const TCHAR* sid)
+	{
+		//ASSERT1(sid);
+		return _tcsicmp(sid, kLocalSystemSid) == 0;
+	}
+	void GetAdminDaclSecurityDescriptor(CSecurityDesc* sd, ACCESS_MASK accessmask)
+	{
+		//ASSERT1(sd);
+
+		CDacl dacl;
+		dacl.AddAllowedAce(Sids::System(), accessmask);
+		dacl.AddAllowedAce(Sids::Admins(), accessmask);
+
+		sd->SetOwner(Sids::Admins());
+		sd->SetGroup(Sids::Admins());
+		sd->SetDacl(dacl);
+		sd->MakeAbsolute();
+	}
+	// Local System and admins get admin_access_mask. Authenticated non-admins get
+	// non_admin_access_mask access.
+	void GetEveryoneDaclSecurityDescriptor(CSecurityDesc* sd,ACCESS_MASK admin_access_mask,ACCESS_MASK non_admin_access_mask) 
+	{
+		//ASSERT1(sd);
+		CDacl dacl;
+		dacl.AddAllowedAce(Sids::System(), admin_access_mask);
+		dacl.AddAllowedAce(Sids::Admins(), admin_access_mask);
+		dacl.AddAllowedAce(Sids::Interactive(), non_admin_access_mask);
+
+		sd->SetDacl(dacl);
+		sd->MakeAbsolute();
+	}
+	bool GetCurrentUserDefaultSecurityAttributes(CSecurityAttributes* sec_attr)
+	{
+		//ASSERT1(sec_attr);
+		CAccessToken token;
+		if (!token.GetProcessToken(TOKEN_QUERY))
+		{
+			return false;
+		}
+		CSecurityDesc security_desc;
+		CSid sid_owner;
+		if (!token.GetOwner(&sid_owner))
+		{
+			return false;
+		}
+		security_desc.SetOwner(sid_owner);
+		CSid sid_group;
+		if (!token.GetPrimaryGroup(&sid_group))
+		{
+			return false;
+		}
+		security_desc.SetGroup(sid_group);
+		CDacl dacl;
+		if (!token.GetDefaultDacl(&dacl))
+		{
+			return false;
+		}
+		CSid sid_user;
+		if (!token.GetUser(&sid_user))
+		{
+			return false;
+		}
+		if (!dacl.AddAllowedAce(sid_user, GENERIC_ALL))
+		{
+			return false;
+		}
+
+		security_desc.SetDacl(dacl);
+		sec_attr->Set(security_desc);
+
+		#ifdef DEBUG
+				CString sddl;
+				security_desc.ToString(&sddl);
+				//UTIL_LOG(L3, (_T("[GetCurrentUserDefaultSecurityAttributes][%s]"), sddl));
+		#endif
+
+		return true;
+	}

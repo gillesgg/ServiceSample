@@ -1,0 +1,24 @@
+HKCR
+{
+	ATLService.Calc.1 = s 'Calc Class'
+	{
+		CLSID = s '{9c524da2-a268-4728-820f-2a3808dd71df}'
+	}
+	ATLService.Calc = s 'Calc Class'
+	{
+		CLSID = s '{9c524da2-a268-4728-820f-2a3808dd71df}'
+		CurVer = s 'ATLService.Calc.1'
+	}
+	NoRemove CLSID
+	{
+		ForceRemove {9c524da2-a268-4728-820f-2a3808dd71df} = s 'SimpleObject Class'
+		{
+			ProgID = s 'ATLService.Calc.1'
+			VersionIndependentProgID = s 'ATLService.Calc'
+			ForceRemove 'Programmable'
+			LocalServer32 = s '%MODULE%'
+			val AppID = s '%APPID%'
+			'TypeLib' = s '{23cb900e-dde5-44b4-9187-113b652b7ffc}'
+		}
+	}
+}

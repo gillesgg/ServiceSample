@@ -1,0 +1,27 @@
+HKLM
+{
+	SYSTEM
+	{
+		CurrentControlSet
+		{
+			Services
+			{
+				ATLService
+				{
+					val 'Description' = s 'ATLService.exe sample'
+				}
+			}
+		}
+	}	
+}
+HKCR
+{
+	NoRemove AppID
+	{
+		'%APPID%' = s 'ATLService'
+		'ATLService.EXE'
+		{
+			val AppID = s '%APPID%'
+		}
+	}
+}

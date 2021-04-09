@@ -1,0 +1,38 @@
+// ATLService.idl : IDL source for ATLService
+//
+
+// This file will be processed by the MIDL tool to
+// produce the type library (ATLService.tlb) and marshalling code.
+
+import "oaidl.idl";
+import "ocidl.idl";
+
+[
+	object,
+	uuid(9bdf0398-b229-4cd0-9b9f-476aebdcb4ea),
+	dual,
+	nonextensible,
+	pointer_default(unique)
+]
+interface ICalc : IDispatch
+{
+	[id(1)] HRESULT Add([in] LONG x, [in] LONG y, [out, retval] LONG *z);
+	[id(2)] HRESULT Div([in] LONG x, [in] LONG y, [out, retval] LONG *z);
+};
+[
+	uuid(23cb900e-dde5-44b4-9187-113b652b7ffc),
+	version(1.0),
+]
+library ATLServiceLib
+{
+	importlib("stdole2.tlb");
+	[
+		uuid(9c524da2-a268-4728-820f-2a3808dd71df)
+	]
+	coclass Calc
+	{
+		[default] interface ICalc;
+	};
+};
+
+import "shobjidl.idl";
